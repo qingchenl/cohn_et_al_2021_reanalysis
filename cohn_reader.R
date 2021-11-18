@@ -19,7 +19,8 @@ summary_infs <- function(df_inf) {
 	
 	weeks <- 1:num_rows
 	
-	plot(weeks, odds_unvac, pch = 1, type = "b", col = "red", lty = 1, xlab = "Week", ylab = "Odds of infection")
+	plot(weeks, odds_unvac, pch = 1, type = "b", col = "red", lty = 1, xlab = "Week", ylab = "Odds of infection",
+		ylim = c(0, 1.2))
 
 	points(weeks, odds_jj, pch = 2, col = "orange", type = "b", lty = 1)
 	points(weeks, odds_moderna, pch = 3, col = "green", type = "b", lty = 1)
@@ -29,14 +30,20 @@ summary_infs <- function(df_inf) {
 	or_moderna <- odds_moderna / odds_unvac
 	or_pb <- odds_pb / odds_unvac
 	
-	plot(weeks, or_jj, pch = 2, col = "orange", type = "b", lty = 1, ylab = "Odds ratio")
+	plot(weeks, or_jj, pch = 2, col = "orange", type = "b", lty = 1, xlab = "Week", ylab = "Odds ratio",
+		ylim = c(0, 1.5))
 	points(weeks, or_moderna, pch = 3, col = "green", type = "b", lty = 1)
 	points(weeks, or_pb, pch = 4, col = "blue", type = "b", lty = 1)
+	
+	odds <- list(unvac = odds_unvac, jj = odds_jj, moderna = odds_moderna, pb = odds_pb)
+	or <- list(jj = or_jj, moderna = or_moderna, pb = or_pb)
+	res <- list(odds = odds, or = or)
+	return(res)
 }
 
-par(mfrow = c(4, 2))
+par(mfcol = c(2, 4))
 
-summary_infs(cohn_all)
-summary_infs(cohn_under50)
-summary_infs(cohn_50_64)
-summary_infs(cohn_over65)
+summ_all <- summary_infs(cohn_all)
+summ_under50 <- summary_infs(cohn_under50)
+summ_50_64 <- summary_infs(cohn_50_64)
+summ_over65 <- summary_infs(cohn_over65)
