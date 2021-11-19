@@ -46,8 +46,8 @@ make_datatable_inf <- function(df) {
 	num_cols <- dim(df)[2]
 	names_vec <- names(df)[2:num_cols]
 	time <- rep(df[[1]], num_cols - 1)
-	vaccine <-  rep(gsub("(\\w+) (?:\\+|\\-)", "\\1", names_vec, perl = T), each = num_rows) #vec
-	infected <- rep(grepl("\\+", names_vec), each = num_rows)
+	vaccine <-  rep(gsub("(\\w+) (?:\\+|\\-)", "\\1", names_vec, perl = T), each = num_rows) #vector of vaccinate names
+	infected <- rep(grepl("\\+", names_vec), each = num_rows) #T for +, F for -
 	counts <- rep(0, num_rows * (num_cols - 1))
 	for (i in 2:num_cols) {
 		counts[((i - 2) * num_rows + 1):(num_rows * (i - 1))] <- df[[i]]
@@ -55,7 +55,25 @@ make_datatable_inf <- function(df) {
 
 	res <- data.frame(time, vaccine, infected, counts)
 	return(res)
-}	
+}
+
+make_datatable_mort <- function(df) {
+	num_rows <- dim(df)[1]
+	num_cols <- dim(df)[2]
+	names_vec <- names(df)[2:num_cols]
+	time <- rep(df[[1]], num_cols - 1)
+	vaccinated <- rep(grepl("Vac", names_vec), each = num_rows)
+	infected <- rep(grepl("PCR\\+", names_vec), each = num_rows)
+	dead <- rep(!grepl("Non-deaths", names_vec), each = num_rows)
+	counts <- rep(0, num_rows * (num_cols - 1))
+	for (i in 2:num_cols) {
+		counts[((i - 2) * num_rows + 1):(num_rows * (i - 1))] <- df[[i]]
+	}
+
+	res <- data.frame(time, vaccinated, infected, dead, counts)
+	return(res)
+}
+	
 
 par(mfcol = c(2, 4))
 
@@ -68,3 +86,8 @@ inf_table_all <- make_datatable_inf(cohn_all)
 inf_table_under50 <- make_datatable_inf(cohn_under50)
 inf_table_50_64 <- make_datatable_inf(cohn_50_64)
 inf_table_over65 <- make_datatable_inf(cohn_over65)
+
+mort_table_under65 <- make_datatable_mort(mort_under65)
+mort_table_over65 <- make_datatable_mort(mort_over65)
+mort_table_low_comorb <- make_datatable_mort(mort_low_comorb)
+mort_table_high_comorb <- make_datatable_mort(mort_high_comorb)
