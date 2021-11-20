@@ -91,3 +91,44 @@ mort_table_under65 <- make_datatable_mort(mort_under65)
 mort_table_over65 <- make_datatable_mort(mort_over65)
 mort_table_low_comorb <- make_datatable_mort(mort_low_comorb)
 mort_table_high_comorb <- make_datatable_mort(mort_high_comorb)
+
+
+## Data QA check
+
+# S3A should be the sum of S3B-D. Verify
+sum_matches <- rep(NA, dim(cohn_all)[2] - 1)
+sum_computed <- Reduce(f = "+", x = list(cohn_under50, cohn_50_64, cohn_over65))
+for (i in 2:dim(cohn_all)[2]) {
+	sum_matches[i - 1] <- prod(cohn_all[[i]] == sum_computed[[i]])
+}
+
+which(!sum_matches)
+
+which(sum_computed[[6 + 1]] != cohn_all[[6 + 1]])
+sum_computed[[7]][7] - cohn_all[[7]][7]
+# mismatched cell is Moderna/PCR-/Week 7
+# mismatch confirmed to exist in source tables (S3A-D)
+
+
+# S3A column sums should be equal or greater (in case of multiple assays/patient)
+# compared to table S1 vaccination status counts
+
+inf_freq_mat <- matrix(NA, 4, 2)
+vacs <- unique(inf_table_all$vaccine)
+inf_status <- c(F, T) # PCR- first for compatibility with Table S1
+for (i in 1:length(vacs)) {
+	for (j in 1:length(inf_status)) {
+		inf_freq_mat[i, j] <- sum(inf_table_all$counts[(inf_table_all$vaccine == vacs[i]) & (inf_table_all$infected == inf_status[j])])
+	}
+}
+
+S1_vac <- read_xlsx("table_S1.xlsx", sheet = "Vaccine")
+S1_vac_count <- as.matrix(S1_vac[,2:3])
+sum(S1_vac_count) #780225, matches the reported total
+
+vac_count_deviation <- S1_vac_count - inf_freq_mat
+vac_count_reldev <- vac_count_deviation / inf_freq_mat #relative deviation
+vac_count_deviation
+vac_count_reldev
+sum(vac_count_deviation)
+## Table S1 counts are smaller than computed counts for unvaccinated, larger for the vaccinated categories
