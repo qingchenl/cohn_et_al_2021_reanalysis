@@ -1,0 +1,128 @@
+/* [wxMaxima batch file version 1] [ DO NOT EDIT BY HAND! ]*/
+/* [ Created with wxMaxima version 21.05.2 ] */
+/* [wxMaxima: input   start ] */
+f : λ*exp(-λ*t);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+F: integrate(subst([t=s], f), s, 0, t);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+Surv: 1 - F;
+surv: diff(S, t);
+h: -s/S;
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+ratsimp(h);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+g : (p/q)*f;
+G: integrate(subst([t=s], g), s, 0, t);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+Surv_a: 1-G;
+surv_a: diff(Surv_a, t);
+h_a: -surv_a/Surv_a;
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+ratsimp(h_a);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+h_a_cand: (λ*(p/q)*exp(-λ*t))/(1-p/q + (p/q)*exp(-λ*t));
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+ratsimp(h_a - h_a_cand);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: comment start ]
+The above verifies the apparent hazard function is correct.
+   [wxMaxima: comment end   ] */
+
+
+/* [wxMaxima: input   start ] */
+dh_a: diff(h_a, t);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+ratsimp(%o16);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+dh_a_cand: (((-λ^2)*p/q)*exp(-λ*t)*(1-p/q)) / (1-p/q + (p/q)*exp(-λ*t))^2;
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+ratsimp(dh_a  - dh_a_cand);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: comment start ]
+The above verifies my calculations for the derivative of hazard rate with respect to time
+   [wxMaxima: comment end   ] */
+
+
+/* [wxMaxima: input   start ] */
+h1: subst([p=p1, q=q1, λ=λ1], h_a);
+h2: subst([p=p2, q=q2, λ=λ2], h_a);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+r: ratsimp(h1/h2);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+dr: diff(r,t);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+num: -λ1^2*(ρ1*exp(-λ1*t))*(1-ρ1)*λ2*ρ2*exp(-λ2*t)*(1-ρ2+ρ2*exp(-λ2*t))-(-λ2^2*(ρ2*exp(-λ2*t))*(1-ρ2)*λ1*ρ1*exp(-λ1*t)*(1-ρ1+ρ1*exp(-λ1*t)));
+denom: (1-ρ1+ρ1*exp(-λ1*t))^2*(1-ρ2+ρ2*exp(-λ2*t))^2;
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+ratsimp(dr - subst([ρ1=p1/q1,ρ2=p2/q2],num/denom)/(h2^2));
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+x: -λ1*λ2*ρ1*ρ2*exp(-(λ1+λ2)*t);
+y: λ1*(1-ρ1)*(1-ρ2+ρ2*exp(-λ2*t))-λ2*(1-ρ2)*(1-ρ1+ρ1*exp(-λ1*t));
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+ratsimp(num - x*y);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+ratsimp(y-((λ1-λ2)*(1-ρ1)*(1-ρ2)+λ1*(1-ρ1)*ρ2*exp(-λ2*t)-λ2*(1-ρ2)*ρ1*exp(-λ1*t)));
+/* [wxMaxima: input   end   ] */
+
+
+
+/* Old versions of Maxima abort on loading files that end in a comment. */
+"Created with wxMaxima 21.05.2"$
