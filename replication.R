@@ -43,6 +43,7 @@ Surv_wrapper2 <- function(time, status, counts) {
 	return(Surv(t, s))
 }
 
+##compute hazard from a survfit object
 compute_haz <- function(sf) {
 	vac_names <- names(sf$strata)
 	vac_names <- gsub("vactypes=(\\w+)", "\\1", vac_names, perl = T)
@@ -62,9 +63,12 @@ compute_haz <- function(sf) {
 		hazs[2, ] <- (sf$n.event[start:finish]/sf$n.risk[start:finish])/tDiffs
 		res[[vname]] <- hazs
 	}
+	attr(res, "sp") <- "hazards"
 	return(res)
 }
 
+##compute hazard ratio (with unvaccinated as baseline) from compute_haz result
+#if no matching time is available, use closest available time
 compute_hr <- function(haz) {
 	unvac_times <- haz$Unvaccinated[1, ]
 	unvac_hazs <- haz$Unvaccinated[2, ]
@@ -83,12 +87,25 @@ compute_hr <- function(haz) {
 			res[[treat]] <- hr
 		}
 	}
-	return(data.frame(res))
+	res <- data.frame(res)
+	attrib(res, "sp") <- "hazard_ratios"
+	return(res)
 }
 
-		
-		
-	
+make_dummy <- function(df) {
+	res <- df
+	vac_types <- c("Janssen", "Moderna", "Pfizer")
+	for(vac in vac_types) {
+		temp_name <- paste("is_", vac, sep = "")
+		res[[temp_name]] <- (df$vaccine == vac)
+		res[[paste("time_", vac, sep = "")]] <- res[[temp_name]] * res$time
+	}
+	res$is_older <- df$age_group == "50_64"
+	res$is_oldest <- df$age_group == "over65"
+	attrib(res, "sp") <- "dummied_df"
+	return(res)
+}
+
 
 par(mfrow = c(1,1))
 
@@ -177,19 +194,18 @@ points(inf_hr_over65$t, inf_hr_over65$Moderna, col = "blue", type = "l")
 points(inf_hr_over65$t, inf_hr_over65$Pfizer, col = "green", type = "l")
 
 
-##cox ph
+##combine data with age group
 inf_table_combined <- rbind(inf_table_under50, inf_table_50_64, inf_table_over65)
-inf_table_combined$age_group <- as.factor(rep(c("under50", "50_64", "over65"),
-						times = c(dim(inf_table_under50)[1], dim(inf_table_50_64)[1], dim(inf_table_over65)[1])))
+inf_table_combined$age_group <- rep(c("under50", "50_64", "over65"),
+						times = c(dim(inf_table_under50)[1], dim(inf_table_50_64)[1], dim(inf_table_over65)[1]))
 inf_surv_combined <- with(inf_table_combined, Surv_wrapper(time, infected, counts))
 vactypes <- with(inf_table_combined, rep(vaccine, times = counts))
 
+inf_table_combined <- make_dummy(inf_table_combined)
 
-for (vac in unique(inf_table_combined$vaccine)) {
-	inf_table_combined[[paste("is_", vac, sep = "")]] <- inf_table_combined$vaccine == vac
-}
 inf_survcovars_combined <- list()
-for(field in names(inf_table_combined)) {
+
+for (field in names(inf_table_combined)) {
 	if (field != "counts") {
 		inf_survcovars_combined[[field]] <- rep(inf_table_combined[[field]], times = inf_table_combined$counts)
 	}
@@ -200,8 +216,6 @@ dim(inf_surv_combined)
 dim(inf_survcovars_combined)
 		
 
-
-
 ##test against known result
 test_sf <- survfit(inf_surv_combined ~ vactypes)
 test_sf$cumhaz - inf_sf_all$cumhaz #difference expected because of inconsistency in total
@@ -211,7 +225,8 @@ inf_sf_combined <- survfit(inf_surv_combined ~ vactypes + age_group)
 
 inf_sf_all
 
-inf_combined <- make_dummy(inf_table_combined)
+
+##to use for coxph, we need to drop entries with 0 observations
 inf_combined <- inf_combined[(inf_combined$counts != 0),]
 rownames(inf_combined) <- 1:nrow(inf_combined)
 
@@ -220,7 +235,7 @@ inf_surv_combined <- Surv(inf_combined$time, inf_combined$infected)
 inf_cox0 <- coxph(Surv(time, infected) ~ age_group + is_Janssen + is_Moderna + is_Pfizer, weights = counts, data = inf_combined, iter.max = 1000)
 inf_cox
 
-#is the Surv object reweighed using weights provided?
+#is the Surv object fed to coxph function reweighed using weights argument?
 S <- Surv(inf_combined$time, inf_combined$infected)
 inf_cox <- coxph(S ~ age_group + is_Janssen + is_Moderna + is_Pfizer, weights = counts, data = inf_combined, iter.max = 1000)
 inf_cox
@@ -260,16 +275,3 @@ trans <- function (x, t, ...) {
 inf_cox_pp <- coxph(inf_surv_combined ~ age_group + is_Janssen + is_Moderna + is_Pfizer + tt(is_Janssen) + tt(is_Moderna) + tt(is_Pfizer), data = inf_combined, tt = trans, weight = counts, ties = "efron")
 inf_cox_pp2 <- coxph(inf_surv_combined ~ age_group + is_Janssen + is_Moderna + is_Pfizer + tt(is_Janssen) + tt(is_Moderna) + tt(is_Pfizer), data = inf_combined, tt = trans, weight = counts, ties = "efron")
 ##this works
-
-
-
-
-
-inf_zph2 <- cox.zph(inf_cox, transform = function(time){ log(time + 20) }, terms = F)
-inf_cox2 <- coxph(inf_surv_combined ~ tt(vaccine) + age_group,
-			data = inf_survcovars_combined,
-			tt = function(x, t, ...){
-				vac <- (x == c("Janssen", "Moderna", "Pfizer")) * t
-				cbind(Janssen = (x == "Janssen"), Moderna = (x == "Moderna"), Pfizer = (x == "Pfizer"))
-			})
-save(inf_cox2, file="inf_cox2", compress = F)
